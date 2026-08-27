@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
 type Level = "Undergraduate" | "Graduate";
@@ -141,6 +142,12 @@ function formatMeeting(course: Course) {
   return `${course.days.map((day) => DAY_NAMES[day]?.slice(0, 3)).join(" · ")} · ${course.begin}–${course.end}`;
 }
 
+async function fetchCsv(path: string) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`Unable to load ${path}`);
+  return response.text();
+}
+
 export default function Home() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [level, setLevel] = useState<Level>("Undergraduate");
@@ -150,11 +157,12 @@ export default function Home() {
   const [selected, setSelected] = useState<string[]>([]);
   const [mobileView, setMobileView] = useState<"courses" | "schedule">("courses");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     Promise.all([
-      fetch("/undergraduate.csv").then((response) => response.text()),
-      fetch("/graduate.csv").then((response) => response.text()),
+      fetchCsv("/undergraduate.csv"),
+      fetchCsv("/graduate.csv"),
     ])
       .then(([undergraduate, graduate]) => {
         setCourses([
@@ -162,14 +170,19 @@ export default function Home() {
           ...buildCourses(graduate, "Graduate"),
         ]);
       })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
 
-    try {
-      const saved = window.localStorage.getItem("hpu-course-plan");
-      if (saved) setSelected(JSON.parse(saved));
-    } catch {
-      // Keep planning available when browser storage is unavailable.
-    }
+    const storageFrame = window.requestAnimationFrame(() => {
+      try {
+        const saved = window.localStorage.getItem("hpu-course-plan");
+        if (saved) setSelected(JSON.parse(saved));
+      } catch {
+        // Keep planning available when browser storage is unavailable.
+      }
+    });
+
+    return () => window.cancelAnimationFrame(storageFrame);
   }, []);
 
   useEffect(() => {
@@ -240,7 +253,7 @@ export default function Home() {
     <main>
       <header className="topbar">
         <a className="brand" href="#top" aria-label="HPU course planner home">
-          <img className="brand-logo" src="/hpu-primary-logo.png" alt="Hawai‘i Pacific University" />
+          <Image className="brand-logo" src="/hpu-primary-logo.png" alt="Hawai‘i Pacific University" width={1000} height={350} priority />
           <span className="brand-divider" aria-hidden="true" />
           <span className="planner-identity"><strong>Course Planner</strong><small>International Visiting Students</small></span>
         </a>
@@ -303,7 +316,10 @@ export default function Home() {
           </div>
 
           <div className="course-list" aria-live="polite">
-            {!loading && visibleCourses.length === 0 && (
+            {loadError && (
+              <div className="empty-results"><strong>Course data could not be loaded.</strong><span>Please refresh the page and try again.</span></div>
+            )}
+            {!loading && !loadError && visibleCourses.length === 0 && (
               <div className="empty-results"><strong>No courses found.</strong><span>Try a different search or filter.</span></div>
             )}
             {visibleCourses.map((course) => {
@@ -374,7 +390,7 @@ export default function Home() {
 
       <footer>
         <div className="footer-brand">
-          <img src="/hpu-primary-white.png" alt="Hawai‘i Pacific University" />
+          <Image src="/hpu-primary-white.png" alt="Hawai‘i Pacific University" width={1000} height={350} />
           <p><strong>Course Planner</strong><span>International visiting students · Fall 2026</span></p>
         </div>
         <a href={DRIVE_URL} target="_blank" rel="noreferrer">View official course lists ↗</a>

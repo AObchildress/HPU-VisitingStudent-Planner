@@ -1,0 +1,21 @@
+# dependencies
+/node_modules
+
+# Next.js output
+/.next
+/out
+
+# Netlify local state
+/.netlify/*
+!/.netlify/results.md
+
+# generated output from the previous vinext setup
+/dist
+
+# local environment files
+.env*
+
+# logs and editor files
+*.log
+.DS_Store
+*.tsbuildinfo
