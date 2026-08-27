@@ -1,0 +1,26 @@
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "HPU Course Planner | International Visiting Students",
+  description: "Explore pre-approved Fall 2026 HPU courses and build a weekly schedule.",
+  icons: { icon: "/hpu-primary-logo.png", shortcut: "/hpu-primary-logo.png" },
+  openGraph: {
+    title: "HPU Course Planner",
+    description: "Pre-approved courses and a visual weekly planner for international visiting students.",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "HPU Course Planner for international visiting students" }],
+  },
+  twitter: { card: "summary_large_image", images: ["/og.png"] },
+};
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="en">
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>{children}</body>
+    </html>
+  );
+}
