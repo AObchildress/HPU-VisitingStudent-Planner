@@ -22,8 +22,12 @@ type Course = {
   prerequisite: string;
 };
 
-const DRIVE_URL =
-  "https://drive.google.com/drive/folders/1JUeKdM27jF4DXjzSjXLi6VSF-ILM7nbP?usp=sharing";
+const SOURCE_URLS: Record<Level, string> = {
+  Undergraduate:
+    "https://docs.google.com/spreadsheets/d/1mlCiaUyAWx2gA9tXy_5BFyO_l_nv3r9t7E0kbd00m8Q/edit?usp=sharing",
+  Graduate:
+    "https://docs.google.com/spreadsheets/d/1uO8R3GxkOoXs79bCUFZ01KroHPNtyRxOlb2hLDmb7eI/edit?usp=sharing",
+};
 const DAY_NAMES: Record<string, string> = {
   M: "Monday",
   T: "Tuesday",
@@ -104,8 +108,8 @@ function buildCourses(csv: string, level: Level): Course[] {
             : "See course listing",
         term:
           level === "Graduate"
-            ? row[index("Part of Term")]?.trim() || "Fall 2026"
-            : "Fall 2026",
+            ? row[index("Part of Term")]?.trim() || "Spring 2027"
+            : "Spring 2027",
         credits: Number.parseFloat(row[index("Credits")] || "0") || 0,
         prerequisite: row[index("Pre-req?")]?.trim() || "",
       };
@@ -161,8 +165,8 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      fetchCsv("/undergraduate.csv"),
-      fetchCsv("/graduate.csv"),
+      fetchCsv("/api/courses?level=undergraduate"),
+      fetchCsv("/api/courses?level=graduate"),
     ])
       .then(([undergraduate, graduate]) => {
         setCourses([
@@ -175,7 +179,7 @@ export default function Home() {
 
     const storageFrame = window.requestAnimationFrame(() => {
       try {
-        const saved = window.localStorage.getItem("hpu-course-plan");
+        const saved = window.localStorage.getItem("hpu-course-plan-spring-2027");
         if (saved) setSelected(JSON.parse(saved));
       } catch {
         // Keep planning available when browser storage is unavailable.
@@ -187,7 +191,7 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem("hpu-course-plan", JSON.stringify(selected));
+      window.localStorage.setItem("hpu-course-plan-spring-2027", JSON.stringify(selected));
     } catch {
       // The schedule remains usable for the current session.
     }
@@ -257,13 +261,13 @@ export default function Home() {
           <span className="brand-divider" aria-hidden="true" />
           <span className="planner-identity"><strong>Course Planner</strong><small>International Visiting Students</small></span>
         </a>
-        <a className="source-link" href={DRIVE_URL} target="_blank" rel="noreferrer">
-          Open source folder <span aria-hidden="true">↗</span>
+        <a className="source-link" href={SOURCE_URLS[level]} target="_blank" rel="noreferrer">
+          Open {level.toLowerCase()} sheet <span aria-hidden="true">↗</span>
         </a>
       </header>
 
       <section className="hero" id="top">
-        <div className="eyebrow"><span /> Fall 2026 · Pre-approved courses</div>
+        <div className="eyebrow"><span /> Spring 2027 · Pre-approved courses</div>
         <h1>Build a semester that<br /><em>fits your island life.</em></h1>
         <p>
           Explore courses already approved for visiting students, then add classes to see your week take shape.
@@ -336,7 +340,7 @@ export default function Home() {
                   <div className="course-details">
                     <span><i aria-hidden="true">◷</i>{formatMeeting(course)}</span>
                     <span><i aria-hidden="true">⌖</i>{course.campus}</span>
-                    {course.term !== "Fall 2026" && <span><i aria-hidden="true">◫</i>{course.term}</span>}
+                    {course.term !== "Spring 2027" && <span><i aria-hidden="true">◫</i>{course.term}</span>}
                   </div>
                   {course.prerequisite && <p className="prereq">Prerequisite note: {course.prerequisite}</p>}
                   <button className="add-course" onClick={() => toggleCourse(course)} aria-pressed={isSelected}>
@@ -391,9 +395,9 @@ export default function Home() {
       <footer>
         <div className="footer-brand">
           <Image src="/hpu-primary-white.png" alt="Hawai‘i Pacific University" width={1000} height={350} />
-          <p><strong>Course Planner</strong><span>International visiting students · Fall 2026</span></p>
+          <p><strong>Course Planner</strong><span>International visiting students · Spring 2027</span></p>
         </div>
-        <a href={DRIVE_URL} target="_blank" rel="noreferrer">View official course lists ↗</a>
+        <a href={SOURCE_URLS[level]} target="_blank" rel="noreferrer">View {level.toLowerCase()} course list ↗</a>
       </footer>
     </main>
   );
