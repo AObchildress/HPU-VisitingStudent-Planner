@@ -5,10 +5,13 @@ const SHEETS = {
     "https://docs.google.com/spreadsheets/d/1uO8R3GxkOoXs79bCUFZ01KroHPNtyRxOlb2hLDmb7eI/gviz/tq?tqx=out:csv&gid=0",
 } as const;
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const level = new URL(request.url).searchParams.get("level");
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ level: string }> },
+) {
+  const { level } = await context.params;
 
   if (level !== "undergraduate" && level !== "graduate") {
     return Response.json(
@@ -19,7 +22,7 @@ export async function GET(request: Request) {
 
   try {
     const response = await fetch(SHEETS[level], {
-      next: { revalidate },
+      next: { revalidate: 3600 },
     });
 
     if (!response.ok) {
