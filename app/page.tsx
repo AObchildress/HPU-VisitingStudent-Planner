@@ -165,8 +165,8 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      fetchCsv("/api/courses?level=undergraduate"),
-      fetchCsv("/api/courses?level=graduate"),
+      fetchCsv("/api/courses/undergraduate"),
+      fetchCsv("/api/courses/graduate"),
     ])
       .then(([undergraduate, graduate]) => {
         setCourses([
