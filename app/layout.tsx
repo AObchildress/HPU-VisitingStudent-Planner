@@ -7,7 +7,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: "HPU Course Planner | International Visiting Students",
-  description: "Explore pre-approved Fall 2026 HPU courses and build a weekly schedule.",
+  description: "Explore pre-approved Spring 2027 HPU courses and build a weekly schedule.",
   icons: { icon: "/hpu-primary-logo.png", shortcut: "/hpu-primary-logo.png" },
   openGraph: {
     title: "HPU Course Planner",
