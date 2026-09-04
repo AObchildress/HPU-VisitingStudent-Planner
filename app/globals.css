@@ -60,8 +60,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .planner-identity strong, .planner-identity small { display: block; }
 .planner-identity strong { color: var(--navy); font-size: 16px; letter-spacing: .01em; }
 .planner-identity small { margin-top: 3px; color: var(--logo-gray); font-size: 11px; letter-spacing: .035em; }
-.source-link { border: 1px solid var(--ocean); border-radius: 4px; padding: 10px 14px; color: var(--ocean); text-decoration: none; font-size: 12px; font-weight: 750; }
-.source-link:hover { background: var(--ocean); color: white; }
 
 .hero {
   position: relative;
@@ -103,8 +101,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .section-heading > div { display: flex; align-items: center; gap: 12px; }
 .section-heading h2 { margin: 0; color: var(--navy); font-size: 21px; letter-spacing: -.025em; }
 .section-heading > span { color: var(--muted); font-size: 12px; font-weight: 650; }
-.step { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 50%; background: var(--ocean); color: white; font-family: var(--font-geist-mono), monospace; font-size: 11px; }
-.step.coral { background: var(--sun); color: var(--navy); }
 
 .level-tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #bfcacc; margin-bottom: 18px; }
 .level-tabs button { position: relative; border: 0; background: transparent; padding: 13px; color: var(--muted); font-size: 13px; font-weight: 700; cursor: pointer; }
@@ -156,6 +152,37 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .planner-note { margin: 17px 0 0; color: #88959a; font-size: 9px; line-height: 1.5; text-align: center; }
 .conflict-banner { display: flex; justify-content: space-between; gap: 10px; margin: 13px 0 0; border-radius: 5px; padding: 8px 10px; background: #fff5e5; color: #8b4a00; font-size: 9px; }
 
+.conflict-notification {
+  position: fixed;
+  z-index: 100;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  width: min(420px, calc(100vw - 40px));
+  border: 1px solid #efad57;
+  border-left: 5px solid #d56b00;
+  border-radius: 8px;
+  padding: 15px 16px;
+  background: #fff8eb;
+  color: #713b00;
+  box-shadow: 0 14px 38px rgba(35, 24, 7, .22);
+}
+.conflict-notification div { display: grid; gap: 4px; }
+.conflict-notification strong { color: #713b00; font-size: 15px; }
+.conflict-notification span { font-size: 14px; line-height: 1.45; }
+.conflict-notification button {
+  flex: none;
+  border: 0;
+  padding: 0 2px;
+  background: transparent;
+  color: #713b00;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .calendar-shell { margin-top: 16px; overflow: hidden; border: 1px solid #dfe6e6; border-radius: 6px; }
 .calendar-header { height: 30px; display: grid; grid-template-columns: 35px repeat(5, 1fr); align-items: center; background: #f0f6f6; border-bottom: 1px solid #dfe6e6; }
 .calendar-header strong { color: #49616a; font-size: 8px; text-align: center; text-transform: uppercase; letter-spacing: .07em; }
@@ -184,8 +211,6 @@ footer p { margin: 0; padding-left: 20px; border-left: 1px solid rgba(255,255,25
 footer strong, footer span { display: block; }
 footer strong { font-size: 13px; }
 footer span { margin-top: 3px; color: var(--aqua); font-size: 9px; }
-footer a { color: white; font-size: 10px; text-decoration: none; }
-footer a:hover { color: var(--sun); }
 
 @media (max-width: 1050px) {
   .planner { grid-template-columns: minmax(0, 1fr) 410px; padding-inline: 26px; }
@@ -200,8 +225,6 @@ footer a:hover { color: var(--sun); }
   .brand { gap: 12px; }
   .brand-logo { width: 190px; }
   .brand-divider, .planner-identity { display: none; }
-  .source-link { font-size: 0; }
-  .source-link span { font-size: 18px; }
   .hero { padding: 47px 23px 50px; }
   .hero h1 { font-size: clamp(40px, 12vw, 60px); }
   .hero > p { font-size: 15px; }
