@@ -147,7 +147,7 @@ function formatMeeting(course: Course) {
 }
 
 async function fetchCsv(path: string) {
-  const response = await fetch(path);
+  const response = await fetch(path, { cache: "no-store" });
   if (!response.ok) throw new Error(`Unable to load ${path}`);
   return response.text();
 }
@@ -164,18 +164,36 @@ export default function Home() {
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      fetchCsv("/api/courses/undergraduate"),
-      fetchCsv("/api/courses/graduate"),
-    ])
-      .then(([undergraduate, graduate]) => {
+    let active = true;
+
+    const loadCourses = async () => {
+      try {
+        const [undergraduate, graduate] = await Promise.all([
+          fetchCsv("/api/courses/undergraduate"),
+          fetchCsv("/api/courses/graduate"),
+        ]);
+
+        if (!active) return;
+
         setCourses([
           ...buildCourses(undergraduate, "Undergraduate"),
           ...buildCourses(graduate, "Graduate"),
         ]);
-      })
-      .catch(() => setLoadError(true))
-      .finally(() => setLoading(false));
+        setLoadError(false);
+      } catch {
+        if (active) setLoadError(true);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void loadCourses();
+
+    const refreshInterval = window.setInterval(loadCourses, 60_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void loadCourses();
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
 
     const storageFrame = window.requestAnimationFrame(() => {
       try {
@@ -186,7 +204,12 @@ export default function Home() {
       }
     });
 
-    return () => window.cancelAnimationFrame(storageFrame);
+    return () => {
+      active = false;
+      window.clearInterval(refreshInterval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.cancelAnimationFrame(storageFrame);
+    };
   }, []);
 
   useEffect(() => {
