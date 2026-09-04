@@ -26,12 +26,6 @@ type Course = {
 
 type CourseDetail = Pick<Course, "description" | "corequisite">;
 
-const SOURCE_URLS: Record<Level, string> = {
-  Undergraduate:
-    "https://docs.google.com/spreadsheets/d/1mlCiaUyAWx2gA9tXy_5BFyO_l_nv3r9t7E0kbd00m8Q/edit?usp=sharing",
-  Graduate:
-    "https://docs.google.com/spreadsheets/d/1uO8R3GxkOoXs79bCUFZ01KroHPNtyRxOlb2hLDmb7eI/edit?usp=sharing",
-};
 const DAY_NAMES: Record<string, string> = {
   M: "Monday",
   T: "Tuesday",
@@ -187,6 +181,7 @@ export default function Home() {
   const [mobileView, setMobileView] = useState<"courses" | "schedule">("courses");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [conflictNotice, setConflictNotice] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -247,6 +242,12 @@ export default function Home() {
     }
   }, [selected]);
 
+  useEffect(() => {
+    if (!conflictNotice) return;
+    const timeout = window.setTimeout(() => setConflictNotice(""), 8000);
+    return () => window.clearTimeout(timeout);
+  }, [conflictNotice]);
+
   const levelCourses = useMemo(
     () => courses.filter((course) => course.level === level),
     [courses, level],
@@ -296,23 +297,43 @@ export default function Home() {
   }
 
   function toggleCourse(course: Course) {
-    setSelected((current) =>
-      current.includes(course.id)
-        ? current.filter((id) => id !== course.id)
-        : [...current, course.id],
-    );
+    setSelected((current) => {
+      if (current.includes(course.id)) {
+        return current.filter((id) => id !== course.id);
+      }
+
+      const overlappingCourses = current
+        .map((id) => courses.find((item) => item.id === id))
+        .filter((item): item is Course => Boolean(item))
+        .filter((item) => overlaps(course, item));
+
+      if (overlappingCourses.length > 0) {
+        const conflictingCodes = overlappingCourses.map((item) => item.code).join(", ");
+        setConflictNotice(
+          `${course.code} overlaps with ${conflictingCodes}. Choose a different section or adjust your schedule.`,
+        );
+      }
+
+      return [...current, course.id];
+    });
   }
 
   return (
     <main>
+      {conflictNotice && (
+        <div className="conflict-notification" role="alert" aria-live="assertive">
+          <div>
+            <strong>Schedule conflict</strong>
+            <span>{conflictNotice}</span>
+          </div>
+          <button onClick={() => setConflictNotice("")} aria-label="Dismiss conflict notification">×</button>
+        </div>
+      )}
       <header className="topbar">
         <a className="brand" href="#top" aria-label="HPU course planner home">
           <Image className="brand-logo" src="/hpu-primary-logo.png" alt="Hawai‘i Pacific University" width={1000} height={350} priority />
           <span className="brand-divider" aria-hidden="true" />
           <span className="planner-identity"><strong>Course Planner</strong><small>International Visiting Students</small></span>
-        </a>
-        <a className="source-link" href={SOURCE_URLS[level]} target="_blank" rel="noreferrer">
-          Open {level.toLowerCase()} sheet <span aria-hidden="true">↗</span>
         </a>
       </header>
 
@@ -324,7 +345,6 @@ export default function Home() {
         </p>
         <div className="hero-notes">
           <span><b>✓</b> Sourced from HPU’s shared course lists</span>
-          <span><b>✓</b> Your plan saves on this device</span>
         </div>
       </section>
 
@@ -336,7 +356,7 @@ export default function Home() {
       <section className="planner">
         <div className={`catalog ${mobileView === "schedule" ? "mobile-hidden" : ""}`}>
           <div className="section-heading">
-            <div><span className="step">01</span><h2>Find your courses</h2></div>
+            <div><h2>Find your courses</h2></div>
             <span>{loading ? "Loading…" : `${visibleCourses.length} courses`}</span>
           </div>
 
@@ -407,8 +427,8 @@ export default function Home() {
         <aside className={`schedule-panel ${mobileView === "courses" ? "mobile-hidden" : ""}`}>
           <div className="schedule-card">
             <div className="section-heading schedule-heading">
-              <div><span className="step coral">02</span><h2>Your weekly schedule</h2></div>
-              {selected.length > 0 && <button className="clear" onClick={() => setSelected([])}>Clear all</button>}
+              <div><h2>Your weekly schedule</h2></div>
+              {selected.length > 0 && <button className="clear" onClick={() => { setSelected([]); setConflictNotice(""); }}>Clear all</button>}
             </div>
             <div className="schedule-summary">
               <span><strong>{selected.length}</strong> {selected.length === 1 ? "course" : "courses"}</span>
@@ -449,7 +469,6 @@ export default function Home() {
           <Image src="/hpu-primary-white.png" alt="Hawai‘i Pacific University" width={1000} height={350} />
           <p><strong>Course Planner</strong><span>International visiting students · Spring 2027</span></p>
         </div>
-        <a href={SOURCE_URLS[level]} target="_blank" rel="noreferrer">View {level.toLowerCase()} course list ↗</a>
       </footer>
     </main>
   );
