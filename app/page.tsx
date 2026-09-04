@@ -20,7 +20,11 @@ type Course = {
   term: string;
   credits: number;
   prerequisite: string;
+  description: string;
+  corequisite: string;
 };
+
+type CourseDetail = Pick<Course, "description" | "corequisite">;
 
 const SOURCE_URLS: Record<Level, string> = {
   Undergraduate:
@@ -83,7 +87,25 @@ function splitDays(value: string) {
     .filter((day) => DAYS.includes(day));
 }
 
-function buildCourses(csv: string, level: Level): Course[] {
+function buildCourseDetails(csv: string) {
+  const [header, ...rows] = parseCsv(csv);
+  const details = new Map<string, CourseDetail>();
+  if (!header) return details;
+  const index = (name: string) => header.findIndex((cell) => cell.trim() === name);
+
+  rows.forEach((row) => {
+    const code = row[index("Course")]?.trim();
+    if (!code) return;
+    details.set(code, {
+      description: row[index("Description")]?.trim() || "",
+      corequisite: row[index("Co-requisite")]?.trim() || "",
+    });
+  });
+
+  return details;
+}
+
+function buildCourses(csv: string, level: Level, details: Map<string, CourseDetail>): Course[] {
   const [header, ...rows] = parseCsv(csv);
   if (!header) return [];
   const index = (name: string) => header.findIndex((cell) => cell.trim() === name);
@@ -91,6 +113,7 @@ function buildCourses(csv: string, level: Level): Course[] {
     .map((row) => {
       const code = row[index("Course")]?.trim() || "";
       const crn = row[index("CRN")]?.trim() || "";
+      const detail = details.get(code);
       return {
         id: `${level}-${crn}-${code}`,
         level,
@@ -112,6 +135,8 @@ function buildCourses(csv: string, level: Level): Course[] {
             : "Spring 2027",
         credits: Number.parseFloat(row[index("Credits")] || "0") || 0,
         prerequisite: row[index("Pre-req?")]?.trim() || "",
+        description: detail?.description || "Course description not available in the current catalog.",
+        corequisite: detail?.corequisite || "",
       };
     })
     .filter((course) => course.code && course.title);
@@ -168,16 +193,18 @@ export default function Home() {
 
     const loadCourses = async () => {
       try {
-        const [undergraduate, graduate] = await Promise.all([
+        const [undergraduate, graduate, courseDetails] = await Promise.all([
           fetchCsv("/api/courses/undergraduate"),
           fetchCsv("/api/courses/graduate"),
+          fetchCsv("/course-details.csv"),
         ]);
 
         if (!active) return;
 
+        const details = buildCourseDetails(courseDetails);
         setCourses([
-          ...buildCourses(undergraduate, "Undergraduate"),
-          ...buildCourses(graduate, "Graduate"),
+          ...buildCourses(undergraduate, "Undergraduate", details),
+          ...buildCourses(graduate, "Graduate", details),
         ]);
         setLoadError(false);
       } catch {
@@ -239,7 +266,7 @@ export default function Home() {
         (college === "All colleges" || course.college === college) &&
         (campus === "All campuses" || course.campus === campus) &&
         (!needle ||
-          `${course.code} ${course.title} ${course.crn} ${course.college}`
+          `${course.code} ${course.title} ${course.crn} ${course.college} ${course.description}`
             .toLowerCase()
             .includes(needle)),
     );
@@ -360,11 +387,13 @@ export default function Home() {
                   </div>
                   <h3>{course.title}</h3>
                   <p className="college">{course.college}</p>
+                  <p className="course-description">{course.description}</p>
                   <div className="course-details">
                     <span><i aria-hidden="true">◷</i>{formatMeeting(course)}</span>
                     <span><i aria-hidden="true">⌖</i>{course.campus}</span>
                     {course.term !== "Spring 2027" && <span><i aria-hidden="true">◫</i>{course.term}</span>}
                   </div>
+                  {course.corequisite && <p className="coreq"><strong>Co-requisite:</strong> {course.corequisite}</p>}
                   {course.prerequisite && <p className="prereq">Prerequisite note: {course.prerequisite}</p>}
                   <button className="add-course" onClick={() => toggleCourse(course)} aria-pressed={isSelected}>
                     <span>{isSelected ? "✓" : "+"}</span>{isSelected ? "Added to schedule" : "Add to schedule"}
