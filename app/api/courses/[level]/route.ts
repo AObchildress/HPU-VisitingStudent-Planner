@@ -6,6 +6,7 @@ const SHEETS = {
 } as const;
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(
   _request: Request,
@@ -21,8 +22,11 @@ export async function GET(
   }
 
   try {
-    const response = await fetch(SHEETS[level], {
-      next: { revalidate: 3600 },
+    const sheetUrl = new URL(SHEETS[level]);
+    sheetUrl.searchParams.set("_", Date.now().toString());
+
+    const response = await fetch(sheetUrl, {
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -34,13 +38,20 @@ export async function GET(
     return new Response(csv, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        Pragma: "no-cache",
+        Expires: "0",
       },
     });
   } catch {
     return Response.json(
       { error: "Course data is temporarily unavailable." },
-      { status: 502 },
+      {
+        status: 502,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
     );
   }
 }
