@@ -81,6 +81,10 @@ function splitDays(value: string) {
     .filter((day) => DAYS.includes(day));
 }
 
+function normalizeCourseCode(value: string) {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 function buildCourseDetails(csv: string) {
   const [header, ...rows] = parseCsv(csv);
   const details = new Map<string, CourseDetail>();
@@ -90,7 +94,7 @@ function buildCourseDetails(csv: string) {
   rows.forEach((row) => {
     const code = row[index("Course")]?.trim();
     if (!code) return;
-    details.set(code, {
+    details.set(normalizeCourseCode(code), {
       description: row[index("Description")]?.trim() || "",
       corequisite: row[index("Co-requisite")]?.trim() || "",
     });
@@ -107,7 +111,7 @@ function buildCourses(csv: string, level: Level, details: Map<string, CourseDeta
     .map((row) => {
       const code = row[index("Course")]?.trim() || "";
       const crn = row[index("CRN")]?.trim() || "";
-      const detail = details.get(code);
+      const detail = details.get(normalizeCourseCode(code));
       return {
         id: `${level}-${crn}-${code}`,
         level,
