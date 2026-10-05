@@ -452,14 +452,33 @@ export default function Home() {
                   <div className="conflict-banner"><strong>Schedule conflict</strong><span>Courses outlined in coral overlap.</span></div>
                 )}
                 <WeeklyCalendar courses={chosenCourses} conflictIds={conflicts} />
-                <div className="selected-list">
-                  {chosenCourses.map((course, index) => (
-                    <div key={course.id}>
-                      <span className="color-dot" style={{ background: PALETTES[index % PALETTES.length][0] }} />
-                      <span><strong>{course.code}</strong><small>{formatMeeting(course)}</small></span>
-                      <button onClick={() => toggleCourse(course)} aria-label={`Remove ${course.code}`}>×</button>
-                    </div>
-                  ))}
+                <div className="selected-courses-table-wrap">
+                  <table className="selected-courses-table">
+                    <thead>
+                      <tr>
+                        <th>CRN</th>
+                        <th>Course Code</th>
+                        <th>Days</th>
+                        <th>Times</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {chosenCourses.map((course, index) => (
+                        <tr key={course.id}>
+                          <td>{course.crn || "—"}</td>
+                          <td>
+                            <span className="selected-course-code">
+                              <span className="color-dot" style={{ background: PALETTES[index % PALETTES.length][0] }} />
+                              <strong>{course.code}</strong>
+                              <button onClick={() => toggleCourse(course)} aria-label={`Remove ${course.code}`}>×</button>
+                            </span>
+                          </td>
+                          <td>{course.days.map((day) => DAY_NAMES[day]?.slice(0, 3)).join(", ") || "TBA"}</td>
+                          <td>{course.begin && course.end ? `${course.begin}–${course.end}` : "TBA"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </>
             )}
