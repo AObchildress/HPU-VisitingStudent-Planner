@@ -195,7 +195,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .calendar-event strong, .calendar-event span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .calendar-event strong { font-size: 8px; }
 .calendar-event.conflict { outline: 2px solid var(--coral); outline-offset: -1px; z-index: 3; }
-.selected-courses-table-wrap { max-height: 160px; overflow: auto; margin-top: 13px; border: 1px solid #e1e7e7; border-radius: 6px; }
+.selected-courses-table-wrap { overflow-x: auto; margin-top: 13px; border: 1px solid #e1e7e7; border-radius: 6px; }
 .selected-courses-table { width: 100%; border-collapse: collapse; color: var(--navy); font-size: 9px; }
 .selected-courses-table th { position: sticky; top: 0; z-index: 1; padding: 8px 7px; background: #f0f6f6; color: #49616a; font-size: 8px; text-align: left; text-transform: uppercase; letter-spacing: .05em; }
 .selected-courses-table td { padding: 8px 7px; border-top: 1px solid #e7ebeb; white-space: nowrap; }
