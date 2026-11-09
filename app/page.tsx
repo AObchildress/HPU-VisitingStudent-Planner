@@ -112,29 +112,40 @@ function buildCourses(csv: string, level: Level, details: Map<string, CourseDeta
   if (!header) return [];
   const index = (name: string) => header.findIndex((cell) => cell.trim() === name);
   const courses = new Map<string, Course>();
+  let lastCourseId = "";
+
+  const addMeeting = (course: Course, meeting: Meeting) => {
+    const meetingKey = JSON.stringify(meeting);
+    if (
+      (meeting.days.length || meeting.begin || meeting.end) &&
+      !course.meetings.some((item) => JSON.stringify(item) === meetingKey)
+    ) {
+      course.meetings.push(meeting);
+    }
+  };
 
   rows.forEach((row) => {
     const code = row[index("Course")]?.trim() || "";
     const crn = row[index("CRN")]?.trim() || "";
     const title = row[index("Title")]?.trim() || "";
-    if (!code || !title) return;
-
-    const id = `${level}-${crn}-${code}`;
     const meeting: Meeting = {
       days: splitDays(row[index("Meeting Days")] || ""),
       begin: row[index("Begin Time")]?.trim() || "",
       end: row[index("End Time")]?.trim() || "",
     };
+
+    if (!code || !title) {
+      const previousCourse = courses.get(lastCourseId);
+      if (previousCourse) addMeeting(previousCourse, meeting);
+      return;
+    }
+
+    const id = `${level}-${crn}-${code}`;
+    lastCourseId = id;
     const existing = courses.get(id);
 
     if (existing) {
-      const meetingKey = JSON.stringify(meeting);
-      if (
-        (meeting.days.length || meeting.begin || meeting.end) &&
-        !existing.meetings.some((item) => JSON.stringify(item) === meetingKey)
-      ) {
-        existing.meetings.push(meeting);
-      }
+      addMeeting(existing, meeting);
       return;
     }
 
