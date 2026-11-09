@@ -5,6 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 
 type Level = "Undergraduate" | "Graduate";
 
+type Meeting = {
+  days: string[];
+  begin: string;
+  end: string;
+};
+
 type Course = {
   id: string;
   level: Level;
@@ -13,9 +19,7 @@ type Course = {
   crn: string;
   code: string;
   title: string;
-  days: string[];
-  begin: string;
-  end: string;
+  meetings: Meeting[];
   method: string;
   term: string;
   credits: number;
@@ -107,37 +111,59 @@ function buildCourses(csv: string, level: Level, details: Map<string, CourseDeta
   const [header, ...rows] = parseCsv(csv);
   if (!header) return [];
   const index = (name: string) => header.findIndex((cell) => cell.trim() === name);
-  return rows
-    .map((row) => {
-      const code = row[index("Course")]?.trim() || "";
-      const crn = row[index("CRN")]?.trim() || "";
-      const detail = details.get(normalizeCourseCode(code));
-      return {
-        id: `${level}-${crn}-${code}`,
-        level,
-        college: row[index("College")]?.trim() || "Other",
-        campus: row[index("Campus")]?.trim() || "Campus not listed",
-        crn,
-        code,
-        title: row[index("Title")]?.trim() || "",
-        days: splitDays(row[index("Meeting Days")] || ""),
-        begin: row[index("Begin Time")]?.trim() || "",
-        end: row[index("End Time")]?.trim() || "",
-        method:
-          level === "Graduate"
-            ? row[index("Instructional Method")]?.trim() || "See course listing"
-            : "See course listing",
-        term:
-          level === "Graduate"
-            ? row[index("Part of Term")]?.trim() || "Spring 2027"
-            : "Spring 2027",
-        credits: Number.parseFloat(row[index("Credits")] || "0") || 0,
-        prerequisite: row[index("Pre-req?")]?.trim() || "",
-        description: detail?.description || "Course description not available in the current catalog.",
-        corequisite: detail?.corequisite || "",
-      };
-    })
-    .filter((course) => course.code && course.title);
+  const courses = new Map<string, Course>();
+
+  rows.forEach((row) => {
+    const code = row[index("Course")]?.trim() || "";
+    const crn = row[index("CRN")]?.trim() || "";
+    const title = row[index("Title")]?.trim() || "";
+    if (!code || !title) return;
+
+    const id = `${level}-${crn}-${code}`;
+    const meeting: Meeting = {
+      days: splitDays(row[index("Meeting Days")] || ""),
+      begin: row[index("Begin Time")]?.trim() || "",
+      end: row[index("End Time")]?.trim() || "",
+    };
+    const existing = courses.get(id);
+
+    if (existing) {
+      const meetingKey = JSON.stringify(meeting);
+      if (
+        (meeting.days.length || meeting.begin || meeting.end) &&
+        !existing.meetings.some((item) => JSON.stringify(item) === meetingKey)
+      ) {
+        existing.meetings.push(meeting);
+      }
+      return;
+    }
+
+    const detail = details.get(normalizeCourseCode(code));
+    courses.set(id, {
+      id,
+      level,
+      college: row[index("College")]?.trim() || "Other",
+      campus: row[index("Campus")]?.trim() || "Campus not listed",
+      crn,
+      code,
+      title,
+      meetings: meeting.days.length || meeting.begin || meeting.end ? [meeting] : [],
+      method:
+        level === "Graduate"
+          ? row[index("Instructional Method")]?.trim() || "See course listing"
+          : "See course listing",
+      term:
+        level === "Graduate"
+          ? row[index("Part of Term")]?.trim() || "Spring 2027"
+          : "Spring 2027",
+      credits: Number.parseFloat(row[index("Credits")] || "0") || 0,
+      prerequisite: row[index("Pre-req?")]?.trim() || "",
+      description: detail?.description || "Course description not available in the current catalog.",
+      corequisite: detail?.corequisite || "",
+    });
+  });
+
+  return Array.from(courses.values());
 }
 
 function toMinutes(time: string) {
@@ -148,7 +174,7 @@ function toMinutes(time: string) {
   return hour * 60 + Number(match[2]);
 }
 
-function overlaps(a: Course, b: Course) {
+function meetingsOverlap(a: Meeting, b: Meeting) {
   const startA = toMinutes(a.begin);
   const endA = toMinutes(a.end);
   const startB = toMinutes(b.begin);
@@ -164,9 +190,15 @@ function overlaps(a: Course, b: Course) {
   );
 }
 
-function formatMeeting(course: Course) {
-  if (!course.days.length || !course.begin) return "Meeting time not listed";
-  return `${course.days.map((day) => DAY_NAMES[day]?.slice(0, 3)).join(" · ")} · ${course.begin}–${course.end}`;
+function overlaps(a: Course, b: Course) {
+  return a.meetings.some((meetingA) =>
+    b.meetings.some((meetingB) => meetingsOverlap(meetingA, meetingB)),
+  );
+}
+
+function formatMeeting(meeting: Meeting) {
+  if (!meeting.days.length || !meeting.begin) return "Meeting time not listed";
+  return `${meeting.days.map((day) => DAY_NAMES[day]?.slice(0, 3)).join(" · ")} · ${meeting.begin}–${meeting.end}`;
 }
 
 async function fetchCsv(path: string) {
@@ -413,7 +445,9 @@ export default function Home() {
                   <p className="college">{course.college}</p>
                   <p className="course-description">{course.description}</p>
                   <div className="course-details">
-                    <span><i aria-hidden="true">◷</i>{formatMeeting(course)}</span>
+                    {course.meetings.length ? course.meetings.map((meeting, index) => (
+                      <span key={`${course.id}-meeting-${index}`}><i aria-hidden="true">◷</i>{formatMeeting(meeting)}</span>
+                    )) : <span><i aria-hidden="true">◷</i>Meeting time not listed</span>}
                     <span><i aria-hidden="true">⌖</i>{course.campus}</span>
                     {course.term !== "Spring 2027" && <span><i aria-hidden="true">◫</i>{course.term}</span>}
                   </div>
@@ -473,8 +507,16 @@ export default function Home() {
                               <button onClick={() => toggleCourse(course)} aria-label={`Remove ${course.code}`}>×</button>
                             </span>
                           </td>
-                          <td>{course.days.map((day) => DAY_NAMES[day]?.slice(0, 3)).join(", ") || "TBA"}</td>
-                          <td>{course.begin && course.end ? `${course.begin}–${course.end}` : "TBA"}</td>
+                          <td>
+                            {course.meetings.length ? course.meetings.map((meeting, index) => (
+                              <div key={`${course.id}-days-${index}`}>{meeting.days.map((day) => DAY_NAMES[day]?.slice(0, 3)).join(", ") || "TBA"}</div>
+                            )) : "TBA"}
+                          </td>
+                          <td>
+                            {course.meetings.length ? course.meetings.map((meeting, index) => (
+                              <div key={`${course.id}-times-${index}`}>{meeting.begin && meeting.end ? `${meeting.begin}–${meeting.end}` : "TBA"}</div>
+                            )) : "TBA"}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -508,25 +550,27 @@ function WeeklyCalendar({ courses, conflictIds }: { courses: Course[]; conflictI
         <div className="time-axis">{hours.map((hour) => <span key={hour} style={{ top: `${((hour * 60 - START) / (END - START)) * 100}%` }}>{hour > 12 ? hour - 12 : hour}{hour >= 12 ? "p" : "a"}</span>)}</div>
         {DAYS.map((day) => (
           <div className="day-column" key={day}>
-            {courses.flatMap((course, courseIndex) => {
-              if (!course.days.includes(day)) return [];
-              const start = toMinutes(course.begin);
-              const end = toMinutes(course.end);
-              if (start === null || end === null) return [];
-              const top = ((start - START) / (END - START)) * 100;
-              const height = ((end - start) / (END - START)) * 100;
-              const [background, color] = PALETTES[courseIndex % PALETTES.length];
-              return (
-                <div
-                  className={`calendar-event ${conflictIds.has(course.id) ? "conflict" : ""}`}
-                  key={`${course.id}-${day}`}
-                  style={{ top: `${top}%`, height: `${Math.max(height, 4)}%`, background, color }}
-                  title={`${course.code}: ${course.title}`}
-                >
-                  <strong>{course.code}</strong><span>{course.begin}</span>
-                </div>
-              );
-            })}
+            {courses.flatMap((course, courseIndex) =>
+              course.meetings.flatMap((meeting, meetingIndex) => {
+                if (!meeting.days.includes(day)) return [];
+                const start = toMinutes(meeting.begin);
+                const end = toMinutes(meeting.end);
+                if (start === null || end === null) return [];
+                const top = ((start - START) / (END - START)) * 100;
+                const height = ((end - start) / (END - START)) * 100;
+                const [background, color] = PALETTES[courseIndex % PALETTES.length];
+                return (
+                  <div
+                    className={`calendar-event ${conflictIds.has(course.id) ? "conflict" : ""}`}
+                    key={`${course.id}-${day}-${meetingIndex}`}
+                    style={{ top: `${top}%`, height: `${Math.max(height, 4)}%`, background, color }}
+                    title={`${course.code}: ${course.title}`}
+                  >
+                    <strong>{course.code}</strong><span>{meeting.begin}</span>
+                  </div>
+                );
+              }),
+            )}
           </div>
         ))}
       </div>
